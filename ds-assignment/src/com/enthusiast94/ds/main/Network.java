@@ -53,7 +53,7 @@ public class Network {
 
             collectMessages();
 
-            if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0) {
+            if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0 && failMessages.size() == 0) {
                 shouldEnd = true;
             }
 
@@ -165,7 +165,7 @@ public class Network {
             System.out.println("ELECTION STARTED");
 
             for (Integer nodeId : electMessageForCurrentRound.getNodeIds()) {
-                nodes.get(nodeId).getOutgoingMessages().add(new Node.ElectionMessage(nodeId, nodeId).toString());
+                nodes.get(nodeId).startElection();
             }
 
             electionMessagesPerRound.remove(round);

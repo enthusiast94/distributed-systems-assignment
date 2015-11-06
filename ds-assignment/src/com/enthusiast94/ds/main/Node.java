@@ -127,6 +127,10 @@ public class Node extends Thread {
         outgoingMessages.remove(m);
     }
 
+    public void startElection() {
+        outgoingMessages.add(new Node.ElectionMessage(id, id).toString());
+    }
+
     @Override
     public void run() {
         while (!shouldStop) {
@@ -146,9 +150,9 @@ public class Node extends Thread {
         shouldStop = true;
     }
 
-    public interface NodeMessage {}
+    private interface NodeMessage {}
 
-    public static class ElectionMessage implements NodeMessage {
+    private static class ElectionMessage implements NodeMessage {
 
         private int electionStarterNodeId;
         private int messageNodeId;
@@ -172,7 +176,7 @@ public class Node extends Thread {
         }
     }
 
-    public static class LeaderMessage implements NodeMessage {
+    private static class LeaderMessage implements NodeMessage {
 
         private int electionStarterNodeId;
         private int leaderNodeId;
