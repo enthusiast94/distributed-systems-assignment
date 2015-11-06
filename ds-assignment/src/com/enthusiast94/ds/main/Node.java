@@ -1,6 +1,7 @@
 package com.enthusiast94.ds.main;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -15,11 +16,14 @@ public class Node extends Thread {
     private int leaderId;
     private List<Node> neighbours;
     private List<String> incomingMessages; // Queue for the incoming messages
+    private List<String> outgoingMessages;
+    private boolean shouldStop = false;
 
     public Node(int id) {
         this.id = id;
 
-        incomingMessages = new ArrayList<>();
+        incomingMessages = Collections.synchronizedList(new ArrayList<>());
+        outgoingMessages = new ArrayList<>();
         neighbours = new ArrayList<>();
         leaderId = -1;
     }
@@ -44,8 +48,8 @@ public class Node extends Thread {
         return neighbours;
     }
 
-    public List<String> getIncomingMessages() {
-        return incomingMessages;
+    public List<String> getOutgoingMessages() {
+        return outgoingMessages;
     }
 
     public void addNeighbour(Node neighbour) {
@@ -57,6 +61,10 @@ public class Node extends Thread {
 		Method that implements the reception of an incoming message by a node
 		*/
 
+        incomingMessages.add(m);
+    }
+
+    private void processIncomingMessage(String m) {
         NodeMessage message = NodeMessageParser.parse(m);
 
         System.out.println("Node " + getNodeId() + " received '" + m + "'");
@@ -67,19 +75,19 @@ public class Node extends Thread {
             if (!isParticipant) {
                 m = new ElectionMessage(electionMessage.getElectionStarterNodeId(),
                         Math.max(electionMessage.getMessageNodeId(), id)).toString();
-                incomingMessages.add(m);
+                outgoingMessages.add(m);
 
                 isParticipant = true;
             } else {
                 if (electionMessage.getMessageNodeId() == id) {
                     isLeader = true;
                     leaderId = id;
-                    incomingMessages.add(new LeaderMessage(electionMessage.getElectionStarterNodeId(), leaderId).toString());
+                    outgoingMessages.add(new LeaderMessage(electionMessage.getElectionStarterNodeId(), leaderId).toString());
                     isParticipant = false;
                     System.out.println("------------------LEADER " + id + "-------------------");
                     Logger.getInstance().addMessage("LEADER " + id);
                 } else if (electionMessage.getMessageNodeId() > id) {
-                    incomingMessages.add(m);
+                    outgoingMessages.add(m);
                 }
             }
         } else if (message instanceof LeaderMessage) {
@@ -92,7 +100,7 @@ public class Node extends Thread {
             isParticipant = false;
 
             if (id != leaderId) {
-                incomingMessages.add(m);
+                outgoingMessages.add(m);
             } else {
                 // When the elected message reaches the newly elected leader, the leader discards that message, and the election is over.
                 System.out.println("ELECTION ENDED");
@@ -116,7 +124,26 @@ public class Node extends Thread {
             isParticipant = true;
         }
 
-        incomingMessages.remove(m);
+        outgoingMessages.remove(m);
+    }
+
+    @Override
+    public void run() {
+        while (!shouldStop) {
+            synchronized (incomingMessages) {
+                for (String m : incomingMessages) {
+                    processIncomingMessage(m);
+                }
+
+                if (incomingMessages.size() > 0) {
+                    incomingMessages.clear();
+                }
+            }
+        }
+    }
+
+    public void stopNode() {
+        shouldStop = true;
     }
 
     public interface NodeMessage {}

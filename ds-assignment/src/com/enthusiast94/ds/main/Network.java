@@ -40,6 +40,12 @@ public class Network {
         }
 
         boolean shouldEnd = false;
+
+        // start all node threads
+        for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
+            entry.getValue().start();
+        }
+
         while (!shouldEnd) {
             round++;
 
@@ -47,11 +53,22 @@ public class Network {
 
             collectMessages();
 
-            if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0 && failMessages.size() == 0) {
+            if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0) {
                 shouldEnd = true;
             }
 
             deliverMessages();
+
+            try {
+                Thread.sleep(period);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+
+        // stop all node threads
+        for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
+            entry.getValue().stopNode();
         }
 
         try {
@@ -148,7 +165,7 @@ public class Network {
             System.out.println("ELECTION STARTED");
 
             for (Integer nodeId : electMessageForCurrentRound.getNodeIds()) {
-                nodes.get(nodeId).getIncomingMessages().add(new Node.ElectionMessage(nodeId, nodeId).toString());
+                nodes.get(nodeId).getOutgoingMessages().add(new Node.ElectionMessage(nodeId, nodeId).toString());
             }
 
             electionMessagesPerRound.remove(round);
@@ -157,8 +174,8 @@ public class Network {
         for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
             // add the least recent incoming message to messagesToDeliver
             // this would prevent multiple messages being sent to a neighbour in the same round
-            if (entry.getValue().getIncomingMessages().size() > 0) {
-                addMessage(entry.getValue().getNodeId(), entry.getValue().getIncomingMessages().get(0));
+            if (entry.getValue().getOutgoingMessages().size() > 0) {
+                addMessage(entry.getValue().getNodeId(), entry.getValue().getOutgoingMessages().get(0));
             }
         }
     }
