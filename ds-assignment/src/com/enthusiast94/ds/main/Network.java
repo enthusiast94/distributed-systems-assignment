@@ -13,7 +13,7 @@ public class Network {
 
     private Map<Integer, Node> nodes;
     private int round;
-    private int period = 20;
+    private int period = 60;
     private Map<Integer, String> messagesToDeliver; //Integer for the id of the sender and String for the message
     private Map<Integer, ElectMessage> electionMessagesPerRound;
     private List<FailMessage> failMessages;
@@ -32,7 +32,7 @@ public class Network {
 
     public void start() {
         try {
-            parseFile("input_simple.txt");
+            parseFile("input.txt");
         } catch (IOException e) {
             System.out.println("There was a problem parsing file");
             e.printStackTrace();
@@ -55,6 +55,8 @@ public class Network {
 
             if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0 && failMessages.size() == 0) {
                 shouldEnd = true;
+            } else if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0) {
+                processFailureMessageQueue();
             }
 
             deliverMessages();
@@ -78,6 +80,8 @@ public class Network {
             e.printStackTrace();
             System.exit(1);
         }
+
+        System.out.println(shouldEnd);
     }
 
     private void parseFile(String fileName) throws IOException {
@@ -89,6 +93,7 @@ public class Network {
         FileInputStream fis = new FileInputStream(networkTextFile);
         BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(fis));
 
+        Map<Integer, List<Integer>> neighbouringNodeIdsMap = new HashMap<>();
         Node first = null;
         Node previous = null;
         boolean isFirst = true;
@@ -113,6 +118,7 @@ public class Network {
             } else {
                 String[] nodeIds = line.split("\\s");
                 int mainNodeId = Integer.valueOf(nodeIds[0]);
+                List<Integer> neighbouringNodeIds = new ArrayList<>();
 
                 for (int i=0; i<nodeIds.length; i++) {
                     if (i == 0) {
@@ -126,24 +132,33 @@ public class Network {
 
                         if (previous != null) {
                             previous.setNext(mainNode);
+                            mainNode.setPrevious(previous);
                         }
 
                         previous = mainNode;
                     } else {
                         int neighbouringNodeId = Integer.valueOf(nodeIds[i]);
-                        if (nodes.containsKey(neighbouringNodeId)) {
-                            nodes.get(mainNodeId).addNeighbour(nodes.get(neighbouringNodeId));
-                        } else {
-                            Node neighbouringNode = new Node(neighbouringNodeId);
-                            nodes.get(mainNodeId).addNeighbour(neighbouringNode);
-                        }
+                        neighbouringNodeIds.add(neighbouringNodeId);
                     }
                 }
 
-                // set first node to be the next node of last node
+                neighbouringNodeIdsMap.put(mainNodeId, neighbouringNodeIds);
+
+                // set first node to be the next node of last node and
+                // set last node to be the previous node of first node
                 if (previous != null) {
                     previous.setNext(first);
+                    first.setPrevious(previous);
                 }
+            }
+        }
+
+        // Now add neighbours for each of the nodes in the ring.
+        // This needs to be done AFTER the ring topology has been constructed
+        // in order to prevent multiple Node instances with the same node id.
+        for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
+            for (int nodeId : neighbouringNodeIdsMap.get(entry.getKey())) {
+                entry.getValue().addNeighbour(nodes.get(nodeId));
             }
         }
 
@@ -178,6 +193,42 @@ public class Network {
                 addMessage(entry.getValue().getNodeId(), entry.getValue().getOutgoingMessages().get(0));
             }
         }
+    }
+
+    public synchronized void processFailureMessageQueue() {
+        FailMessage failMessage = failMessages.get(0);
+        System.out.println("Node " + failMessage.getFailedNodeId() + " FAILED");
+
+        Node failedNode = nodes.get(failMessage.getFailedNodeId());
+
+        for (Node failedNodeNeighbour : failedNode.getNeighbours()) {
+            // update next and previous node of next and previous nodes of failed node respectively
+            if (failedNodeNeighbour.getNodeId() == failedNode.getPrevious().getNodeId()) {
+                failedNodeNeighbour.setNext(failedNode.getNext());
+
+                // add new next node to neighbours
+                failedNodeNeighbour.addNeighbour(failedNode.getNext());
+            } else if (failedNodeNeighbour.getNodeId() == failedNode.getNext().getNodeId()) {
+                failedNodeNeighbour.setPrevious(failedNode.getPrevious());
+
+                // add new previous node to neighbours
+                failedNodeNeighbour.addNeighbour(failedNode.getPrevious());
+            }
+
+            // remove failed node from the neighbours of all neighbours of failed node
+            failedNodeNeighbour.removeNeighbour(failedNode);
+        }
+
+        // if the failed node is the leader, start a leader election at its first neighbour
+        if (failedNode.isLeader()) {
+            failedNode.getNeighbours().get(0).startElection();
+        }
+
+        // stop failed node's thread and remove it from the ring
+        failedNode.stopNode();
+        nodes.remove(failedNode.getNodeId());
+
+        failMessages.remove(failMessage);
     }
 
     public synchronized void deliverMessages() {

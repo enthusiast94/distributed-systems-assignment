@@ -13,6 +13,7 @@ public class Node extends Thread {
     private boolean isParticipant;
     private boolean isLeader = false;
     private Node next;
+    private Node previous;
     private int leaderId;
     private List<Node> neighbours;
     private List<String> incomingMessages; // Queue for the incoming messages
@@ -44,6 +45,14 @@ public class Node extends Thread {
         this.next = next;
     }
 
+    public Node getPrevious() {
+        return previous;
+    }
+
+    public void setPrevious(Node previous) {
+        this.previous = previous;
+    }
+
     public List<Node> getNeighbours() {
         return neighbours;
     }
@@ -52,8 +61,16 @@ public class Node extends Thread {
         return outgoingMessages;
     }
 
+    public boolean isLeader() {
+        return isLeader;
+    }
+
     public void addNeighbour(Node neighbour) {
         this.neighbours.add(neighbour);
+    }
+
+    public void removeNeighbour(Node neighbour) {
+        neighbours.remove(neighbour);
     }
 
     public void receiveMsg(String m) {
