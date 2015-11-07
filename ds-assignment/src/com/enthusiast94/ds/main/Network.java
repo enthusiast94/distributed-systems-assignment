@@ -13,7 +13,7 @@ public class Network {
 
     private Map<Integer, Node> nodes;
     private int round;
-    private int period = 60;
+    private static final int PERIOD = 20;
     private Map<Integer, String> messagesToDeliver; //Integer for the id of the sender and String for the message
     private Map<Integer, ElectMessage> electionMessagesPerRound;
     private List<FailMessage> failMessages;
@@ -62,7 +62,7 @@ public class Network {
             deliverMessages();
 
             try {
-                Thread.sleep(period);
+                Thread.sleep(PERIOD);
             } catch (InterruptedException e) {
                 e.printStackTrace();
             }
@@ -80,8 +80,6 @@ public class Network {
             e.printStackTrace();
             System.exit(1);
         }
-
-        System.out.println(shouldEnd);
     }
 
     private void parseFile(String fileName) throws IOException {
@@ -202,31 +200,11 @@ public class Network {
         Node failedNode = nodes.get(failMessage.getFailedNodeId());
 
         for (Node failedNodeNeighbour : failedNode.getNeighbours()) {
-            // update next and previous node of next and previous nodes of failed node respectively
-            if (failedNodeNeighbour.getNodeId() == failedNode.getPrevious().getNodeId()) {
-                failedNodeNeighbour.setNext(failedNode.getNext());
-
-                // add new next node to neighbours
-                failedNodeNeighbour.addNeighbour(failedNode.getNext());
-            } else if (failedNodeNeighbour.getNodeId() == failedNode.getNext().getNodeId()) {
-                failedNodeNeighbour.setPrevious(failedNode.getPrevious());
-
-                // add new previous node to neighbours
-                failedNodeNeighbour.addNeighbour(failedNode.getPrevious());
-            }
-
-            // remove failed node from the neighbours of all neighbours of failed node
-            failedNodeNeighbour.removeNeighbour(failedNode);
+            failedNodeNeighbour.informNeighbourFailure(failedNode.getNodeId());
         }
 
-        // if the failed node is the leader, start a leader election at its first neighbour
-        if (failedNode.isLeader()) {
-            failedNode.getNeighbours().get(0).startElection();
-        }
-
-        // stop failed node's thread and remove it from the ring
+        // stop failed node's thread
         failedNode.stopNode();
-        nodes.remove(failedNode.getNodeId());
 
         failMessages.remove(failMessage);
     }
@@ -253,12 +231,6 @@ public class Network {
         }
 
         messagesToDeliver.clear();
-    }
-
-    public synchronized void informNodeFailure(int id) {
-		/*
-		Method to inform the neighbours of a failed node about the event.
-		*/
     }
 
     private static class ElectMessage {

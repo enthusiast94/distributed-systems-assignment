@@ -122,6 +122,40 @@ public class Node extends Thread {
                 // When the elected message reaches the newly elected leader, the leader discards that message, and the election is over.
                 System.out.println("ELECTION ENDED");
             }
+        } else if (message instanceof NeighbourFailureMessage) {
+            NeighbourFailureMessage neighbourFailureMessage = (NeighbourFailureMessage) message;
+
+            // get failed node instance from neighbours list
+            Node failedNode = null;
+            for (Node node : neighbours) {
+                if (node.getNodeId() == neighbourFailureMessage.getFailedNeighbourId()) {
+                    failedNode = node;
+                    break;
+                }
+            }
+
+            // update next and previous node of next and previous nodes of failed node respectively
+            assert failedNode != null;
+
+            if (id == failedNode.getPrevious().getNodeId()) {
+                next = failedNode.getNext();
+
+                // add new next node to neighbours
+                neighbours.add(failedNode.getNext());
+            } else if (id == failedNode.getNext().getNodeId()) {
+                previous = failedNode.getPrevious();
+
+                // add new previous node to neighbours
+                neighbours.add(failedNode.getPrevious());
+            }
+
+            // remove failed node from the neighbours
+            neighbours.remove(failedNode);
+
+            // if failed node was the leader, start leader election
+            if (failedNode.isLeader) {
+                startElection();
+            }
         } else {
             throw new RuntimeException("invalid message type");
         }
@@ -146,6 +180,10 @@ public class Node extends Thread {
 
     public void startElection() {
         outgoingMessages.add(new Node.ElectionMessage(id, id).toString());
+    }
+
+    public void informNeighbourFailure(int failedNeighbourId) {
+        incomingMessages.add(new Node.NeighbourFailureMessage(failedNeighbourId).toString());
     }
 
     @Override
@@ -217,6 +255,24 @@ public class Node extends Thread {
         }
     }
 
+    public static class NeighbourFailureMessage implements NodeMessage {
+
+        private int failedNeighbourId;
+
+        public NeighbourFailureMessage(int failedNeighbourId) {
+            this.failedNeighbourId = failedNeighbourId;
+        }
+
+        public int getFailedNeighbourId() {
+            return failedNeighbourId;
+        }
+
+        @Override
+        public String toString() {
+            return "NEIGHBOUR-FAILURE " + failedNeighbourId;
+        }
+    }
+
     public static class NodeMessageParser {
         public static NodeMessage parse(String message) {
             String[] split = message.split("\\s");
@@ -226,6 +282,8 @@ public class Node extends Thread {
                     return new ElectionMessage(Integer.valueOf(split[1]), Integer.valueOf(split[2]));
                 case "LEADER":
                     return new LeaderMessage(Integer.valueOf(split[1]), Integer.valueOf(split[2]));
+                case "NEIGHBOUR-FAILURE":
+                    return new NeighbourFailureMessage(Integer.valueOf(split[1]));
                 default:
                     return null;
             }
