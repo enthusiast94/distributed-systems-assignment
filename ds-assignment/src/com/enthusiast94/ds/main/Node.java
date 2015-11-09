@@ -16,8 +16,8 @@ public class Node extends Thread {
     private Node previous;
     private int leaderId;
     private List<Node> neighbours;
-    private List<String> incomingMessages; // Queue for the incoming messages
-    private List<String> outgoingMessages;
+    private List<String> incomingMessages;
+    private List<String> outgoingMessages; // Queue for the outgoing messages
     private boolean shouldStop = false;
 
     public Node(int id) {
@@ -107,7 +107,7 @@ public class Node extends Thread {
 
             leaderId = leaderMessage.getLeaderNodeId();
 
-            // When a process receives an elected message, it marks itself as non-participant,
+            // When a process receives a leader message, it marks itself as non-participant,
             // records the elected UID, and forwards the elected message unchanged.
             isParticipant = false;
 
