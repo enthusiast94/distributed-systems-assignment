@@ -86,8 +86,7 @@ public class Node extends Thread {
             ElectionMessage electionMessage = (ElectionMessage) message;
 
             if (!isParticipant) {
-                m = new ElectionMessage(electionMessage.getElectionStarterNodeId(),
-                        Math.max(electionMessage.getMessageNodeId(), id)).toString();
+                m = new ElectionMessage(Math.max(electionMessage.getMessageNodeId(), id)).toString();
                 outgoingMessages.add(m);
 
                 isParticipant = true;
@@ -95,7 +94,7 @@ public class Node extends Thread {
                 if (electionMessage.getMessageNodeId() == id) {
                     isLeader = true;
                     leaderId = id;
-                    outgoingMessages.add(new LeaderMessage(electionMessage.getElectionStarterNodeId(), leaderId).toString());
+                    outgoingMessages.add(new LeaderMessage(leaderId).toString());
                     isParticipant = false;
                     System.out.println("LEADER " + id);
                     Logger.getInstance().addMessage("LEADER " + id);
@@ -175,7 +174,7 @@ public class Node extends Thread {
     }
 
     public void startElection() {
-        outgoingMessages.add(new Node.ElectionMessage(id, id).toString());
+        outgoingMessages.add(new Node.ElectionMessage(id).toString());
     }
 
     public void informNeighbourFailure(int failedNeighbourId) {
@@ -205,16 +204,10 @@ public class Node extends Thread {
 
     private static class ElectionMessage implements NodeMessage {
 
-        private int electionStarterNodeId;
         private int messageNodeId;
 
-        public ElectionMessage(int electionStarterNodeId, int messageNodeId) {
-            this.electionStarterNodeId = electionStarterNodeId;
+        public ElectionMessage(int messageNodeId) {
             this.messageNodeId = messageNodeId;
-        }
-
-        public int getElectionStarterNodeId() {
-            return electionStarterNodeId;
         }
 
         public int getMessageNodeId() {
@@ -223,22 +216,16 @@ public class Node extends Thread {
 
         @Override
         public String toString() {
-            return "ELECTION " + electionStarterNodeId + " " + messageNodeId;
+            return "ELECTION " + messageNodeId;
         }
     }
 
     private static class LeaderMessage implements NodeMessage {
 
-        private int electionStarterNodeId;
         private int leaderNodeId;
 
-        public LeaderMessage(int electionStarterNodeId, int leaderNodeId) {
-            this.electionStarterNodeId = electionStarterNodeId;
+        public LeaderMessage(int leaderNodeId) {
             this.leaderNodeId = leaderNodeId;
-        }
-
-        public int getElectionStarterNodeId() {
-            return electionStarterNodeId;
         }
 
         public int getLeaderNodeId() {
@@ -247,7 +234,7 @@ public class Node extends Thread {
 
         @Override
         public String toString() {
-            return "LEADER " + electionStarterNodeId + " " + leaderNodeId;
+            return "LEADER " + leaderNodeId;
         }
     }
 
@@ -275,9 +262,9 @@ public class Node extends Thread {
 
             switch (split[0]) {
                 case "ELECTION":
-                    return new ElectionMessage(Integer.valueOf(split[1]), Integer.valueOf(split[2]));
+                    return new ElectionMessage(Integer.valueOf(split[1]));
                 case "LEADER":
-                    return new LeaderMessage(Integer.valueOf(split[1]), Integer.valueOf(split[2]));
+                    return new LeaderMessage(Integer.valueOf(split[1]));
                 case "NEIGHBOUR-FAILURE":
                     return new NeighbourFailureMessage(Integer.valueOf(split[1]));
                 default:
