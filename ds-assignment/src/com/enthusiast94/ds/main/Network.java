@@ -17,13 +17,17 @@ public class Network {
     private Map<Integer, String> messagesToDeliver; //Integer for the id of the sender and String for the message
     private Map<Integer, ElectMessage> electionMessagesPerRound;
     private List<FailMessage> failMessages;
+    private String networkFileName;
 
-    public Network() {
+    public Network(String networkFileName) {
 		/*
 		Code to call methods for parsing the input file, initiating the system and producing the log can be added here.
 		*/
 
+        this.networkFileName = networkFileName;
+
         Logger.init("log.txt");
+
         messagesToDeliver = new HashMap<>();
         electionMessagesPerRound = new HashMap<>();
         nodes = new HashMap<>();
@@ -32,7 +36,7 @@ public class Network {
 
     public void start() {
         try {
-            parseFile("input.txt");
+            parseFile(networkFileName);
         } catch (IOException e) {
             System.out.println("There was a problem parsing file");
             e.printStackTrace();
@@ -280,6 +284,12 @@ public class Network {
 		Your main must get the input file as input.
 		*/
 
-        new Network().start();
+        if (args.length > 0) {
+            new Network(args[0]).start();
+        } else {
+            System.out.println("Network file name is a required parameter.");
+            System.exit(1);
+        }
+
     }
 }
