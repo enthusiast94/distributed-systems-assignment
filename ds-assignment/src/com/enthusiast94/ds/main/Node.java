@@ -24,7 +24,7 @@ public class Node extends Thread {
         this.id = id;
 
         incomingMessages = Collections.synchronizedList(new ArrayList<>());
-        outgoingMessages = new ArrayList<>();
+        outgoingMessages = Collections.synchronizedList(new ArrayList<>());
         neighbours = new ArrayList<>();
         leaderId = -1;
     }
@@ -57,20 +57,16 @@ public class Node extends Thread {
         return neighbours;
     }
 
+    public List<String> getIncomingMessages() {
+        return incomingMessages;
+    }
+
     public List<String> getOutgoingMessages() {
         return outgoingMessages;
     }
 
-    public boolean isLeader() {
-        return isLeader;
-    }
-
     public void addNeighbour(Node neighbour) {
         this.neighbours.add(neighbour);
-    }
-
-    public void removeNeighbour(Node neighbour) {
-        neighbours.remove(neighbour);
     }
 
     public void receiveMsg(String m) {
@@ -101,7 +97,7 @@ public class Node extends Thread {
                     leaderId = id;
                     outgoingMessages.add(new LeaderMessage(electionMessage.getElectionStarterNodeId(), leaderId).toString());
                     isParticipant = false;
-                    System.out.println("------------------LEADER " + id + "-------------------");
+                    System.out.println("LEADER " + id);
                     Logger.getInstance().addMessage("LEADER " + id);
                 } else if (electionMessage.getMessageNodeId() > id) {
                     outgoingMessages.add(m);

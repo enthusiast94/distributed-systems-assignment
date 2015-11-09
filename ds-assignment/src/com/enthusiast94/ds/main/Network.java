@@ -49,17 +49,23 @@ public class Network {
         while (!shouldEnd) {
             round++;
 
-            System.out.println("Round: " + round);
+            System.out.println("--Round: " + round);
 
-            collectMessages();
+            // if nodes are still processing incoming messages from previous round, then provide them with a
+            // free round to finish processing, else continue with collecting and delivering messages as normal
+            if (areAllNodesDoneProcessingIncomingMessages()) {
+                collectMessages();
 
-            if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0 && failMessages.size() == 0) {
-                shouldEnd = true;
-            } else if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0) {
-                processFailureMessageQueue();
+                if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0 && failMessages.size() == 0) {
+                    shouldEnd = true;
+                } else if (messagesToDeliver.size() == 0 && electionMessagesPerRound.size() == 0) {
+                    processFailureMessageQueue();
+                }
+
+                deliverMessages();
+            } else {
+                System.out.println("Some nodes are still processing incoming messages from a previous round.");
             }
-
-            deliverMessages();
 
             try {
                 Thread.sleep(PERIOD);
@@ -185,12 +191,22 @@ public class Network {
         }
 
         for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
-            // add the least recent incoming message to messagesToDeliver
+            // add the least recent outgoing message to messagesToDeliver
             // this would prevent multiple messages being sent to a neighbour in the same round
             if (entry.getValue().getOutgoingMessages().size() > 0) {
                 addMessage(entry.getValue().getNodeId(), entry.getValue().getOutgoingMessages().get(0));
             }
         }
+    }
+
+    public boolean areAllNodesDoneProcessingIncomingMessages() {
+        boolean areDone = true;
+
+        for (Map.Entry<Integer, Node> entry : nodes.entrySet()) {
+            areDone = areDone && entry.getValue().getIncomingMessages().size() == 0;
+        }
+
+        return areDone;
     }
 
     public synchronized void processFailureMessageQueue() {
