@@ -129,19 +129,28 @@ public class Node extends Thread {
                 }
             }
 
-            // update next and previous node of next and previous nodes of failed node respectively
             assert failedNode != null;
 
-            if (id == failedNode.getPrevious().getNodeId()) {
+            // If next and previous node of the failed node is the current node, that means that this node is the only
+            // remaining node. Hence, set next and previous node of this node to be null. Else, update next and
+            // previous node to be next and previous node of failed node respectively
+            if (id == failedNode.getPrevious().getNodeId() && id == failedNode.getNext().getNodeId()) {
+                next = null;
+                previous = null;
+            } else if (id == failedNode.getPrevious().getNodeId()) {
                 next = failedNode.getNext();
 
-                // add new next node to neighbours
-                neighbours.add(failedNode.getNext());
+                // add new next node to neighbours if its not already a neighbour
+                if (!neighbours.contains(failedNode.getNext())) {
+                    neighbours.add(failedNode.getNext());
+                }
             } else if (id == failedNode.getNext().getNodeId()) {
                 previous = failedNode.getPrevious();
 
-                // add new previous node to neighbours
-                neighbours.add(failedNode.getPrevious());
+                // add new previous node to neighbours if its not already a neighbour
+                if (!neighbours.contains(failedNode.getPrevious())) {
+                    neighbours.add(failedNode.getPrevious());
+                }
             }
 
             // remove failed node from the neighbours

@@ -247,7 +247,9 @@ public class Network {
             Node node = nodes.get(entry.getKey());
             String message = entry.getValue();
 
-            node.getNext().receiveMsg(message);
+            if (node.getNext() != null) {
+                node.getNext().receiveMsg(message);
+            }
         }
 
         messagesToDeliver.clear();
@@ -290,6 +292,5 @@ public class Network {
             System.out.println("Network file name is a required parameter.");
             System.exit(1);
         }
-
     }
 }
