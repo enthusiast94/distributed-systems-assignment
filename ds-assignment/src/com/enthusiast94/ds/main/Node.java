@@ -247,7 +247,7 @@ public class Node extends Thread {
         }
     }
 
-    public static class NeighbourFailureMessage implements NodeMessage {
+    private static class NeighbourFailureMessage implements NodeMessage {
 
         private int failedNeighbourId;
 
@@ -265,7 +265,7 @@ public class Node extends Thread {
         }
     }
 
-    public static class NodeMessageParser {
+    private static class NodeMessageParser {
         public static NodeMessage parse(String message) {
             String[] split = message.split("\\s");
 
